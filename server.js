@@ -46,52 +46,41 @@ const io = new Server(server, {
 });
 
 io.engine.generateId = function (req) {
-    // generate a new custom id here
-    return 1
-}
+  // generate a new custom id here
+  return 1;
+};
 
 let firstTime = true;
 let roomID;
 // a client has connected
 io.on("connection", (socket) => {
   socket.on("join_room", (data) => {
-    console.log("user wants to join here", data);
+    //console.log("user wants to join here", data);
   });
-  
 
+  socket.on("input", (input) => {
+    console.log("input", input);
+    // ToDo: check if it is the users turn
 
-  socket.on("create_room", () => {
-    socket.join(socket.id);
+    //if valid
+    updateGameState(input.move);
 
-    socket.emit("connected", { connected: true, roomID: socket.id });
-    
-    console.log("room created", socket.id)
+    //console.log("user wants to join here", data);
+  });
 
-    /* console.log("user", socket.id)
-      if (firstTime) {
-        roomID = socket.id;
-        socket.join(roomID);
-        firstTime = false;
-      }
-  
-      var currentRooms = io.sockets.adapter.rooms;  // Change variable name to currentRooms
-      console.log("rooms", currentRooms);
-  
-      console.log("room size:", currentRooms.get(roomID).size);
-      if (currentRooms.get(roomID).size >= 2) {
-        roomID = generateRoomId();
-        console.log("room created after check", roomID);
-      }
-      console.log("joining room", roomID)
-      socket.join(roomID);
-  
-      //console.log("roomID", roomID);
-      // console.log(`User ${socket.id} joined room ${roomID}`);
-  
-      socket.emit("connected", { connected: true, roomID: roomID });
-      // Additional logic for handling room joining
-      console.log("still this room", roomID)
-    });*/
+  socket.on("create_room", (name) => {
+    socket.emit("connected", {
+      connected: true,
+      roomID: name + "-" + socket.id,
+      userID: socket.id,
+    });
+
+    //console.log("room created with data:", name + "-" + socket.id);
+    socket.join(name + "-" + socket.id);
+    // var currentRooms = io.sockets.adapter.rooms; // Change variable name to currentRooms
+    //console.log("rooms-join", currentRooms);
+
+    io.to(name + "-" + socket.id).emit("game_state", gameState);
   });
 
   // Handle user disconnection
