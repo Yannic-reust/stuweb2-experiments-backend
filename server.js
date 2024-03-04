@@ -8,6 +8,32 @@ const server = createServer(app);
 // create a map to store game states for each room
 const gameStates = new Map();
 
+//options for cors midddleware
+const options = {
+  allowedHeaders: [
+      'X-ACCESS_TOKEN',
+      'Access-Control-Allow-Origin',
+      'Authorization',
+      'Origin',
+      'x-requested-with',
+      'Content-Type',
+      'Content-Range',
+      'Content-Disposition',
+      'Content-Description',
+  ],
+  credentials: true,
+  methods: 'GET,HEAD,OPTIONS,PUT,PATCH,POST,DELETE',
+  origin: [
+      'http://localhost:5001',
+      'http://localhost:50000',
+  ],
+  preflightContinue: false,
+};
+
+const corsOpts = cors(options);
+
+app.use(corsOpts);
+
 function createGameState() {
   return [
     { index: 0, player: null },
@@ -39,7 +65,7 @@ function updateGameState(data) {
 // Enable CORS
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: "https://stuweb2-experiments.vercel.app/",
     methods: ["GET", "POST"],
   },
   connectionStateRecovery: {
