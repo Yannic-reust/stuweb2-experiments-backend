@@ -4,7 +4,6 @@ import { fileURLToPath } from "node:url";
 import { Server } from "socket.io";
 import { createServer } from "node:http";
 
-
 let app = express();
 const server = createServer(app);
 
@@ -35,9 +34,8 @@ function updateGameState(data) {
     io.to(data.roomID).emit("game_state", roomGameState);
     io.to(data.roomID).emit("turn", playersTurn);
 
-    console.log("gameState", roomGameState);
+   
   }
- 
 }
 
 // Enable CORS
@@ -51,15 +49,10 @@ const io = new Server(server, {
   },
 });
 
-
-
-
 io.on("connection", (socket) => {
   socket.on("join_room", (data) => {
-    console.log("user wants to join here", data);
     socket.join(data);
 
-    // create a game state for the room if not already created
     if (!gameStates.has(data)) {
       gameStates.set(data, createGameState());
     }
@@ -76,8 +69,6 @@ io.on("connection", (socket) => {
   });
 
   socket.on("input", (input) => {
-    console.log("input", input);
-    // if valid
     updateGameState(input);
   });
 
@@ -108,8 +99,6 @@ io.on("connection", (socket) => {
     // Additional logic for handling user disconnection
   });
 });
-
-
 
 // start the web server
 let port = process.env.PORT || 8080; // set our port
