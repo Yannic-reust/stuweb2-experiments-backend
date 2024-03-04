@@ -1,6 +1,7 @@
 import express from "express";
 import { Server } from "socket.io";
 import { createServer } from "node:http";
+import cors from "cors";
 
 let app = express();
 const server = createServer(app);
@@ -24,15 +25,15 @@ const options = {
   credentials: true,
   methods: 'GET,HEAD,OPTIONS,PUT,PATCH,POST,DELETE',
   origin: [
-      'http://localhost:5001',
-      'http://localhost:50000',
+      'http://localhost:5713',
+      'https://stuweb2-experiments.vercel.app/',
   ],
   preflightContinue: false,
 };
 
 const corsOpts = cors(options);
 
-app.use(corsOpts);
+//app.use(corsOpts);
 
 function createGameState() {
   return [
@@ -65,7 +66,7 @@ function updateGameState(data) {
 // Enable CORS
 const io = new Server(server, {
   cors: {
-    origin: "https://stuweb2-experiments.vercel.app/",
+    origin: "*",
     methods: ["GET", "POST"],
   },
   connectionStateRecovery: {
