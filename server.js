@@ -4,17 +4,12 @@ import { fileURLToPath } from "node:url";
 import { Server } from "socket.io";
 import { createServer } from "node:http";
 
-// create a new express web server
-let app = express();
 
-// create a new socket.io server
+let app = express();
 const server = createServer(app);
 
-const gameState = createGameState();
-const rooms = [];
-const connectedUsers = {};
-
-let playersTurn = 1;
+// create a map to store game states for each room
+const gameStates = new Map();
 
 function createGameState() {
   return [
@@ -27,17 +22,21 @@ function createGameState() {
     { index: 6, player: null },
     { index: 7, player: null },
     { index: 8, player: null },
-   
   ];
 }
 
 function updateGameState(data) {
+  const roomGameState = gameStates.get(data.roomID);
 
-  gameState[data.move].player =data.player;
-  playersTurn = data.player === 1 ? 2 : 1;
-  io.to(data.roomID).emit("game_state", gameState);
-  io.to(data.roomID).emit("turn", playersTurn);
-  console.log("gameState", gameState);
+  if (roomGameState) {
+    roomGameState[data.move].player = data.player;
+    const playersTurn = data.player === 1 ? 2 : 1;
+
+    io.to(data.roomID).emit("game_state", roomGameState);
+    io.to(data.roomID).emit("turn", playersTurn);
+
+    console.log("gameState", roomGameState);
+  }
  
 }
 
@@ -54,57 +53,51 @@ const io = new Server(server, {
 
 
 
-let firstTime = true;
-let roomID;
 
-// a client has connected
 io.on("connection", (socket) => {
-
-  var currentRooms = io.sockets.adapter.rooms;
-  console.log("rooms", currentRooms);
-
   socket.on("join_room", (data) => {
     console.log("user wants to join here", data);
     socket.join(data);
-    
+
+    // create a game state for the room if not already created
+    if (!gameStates.has(data)) {
+      gameStates.set(data, createGameState());
+    }
+
     io.to(data).emit("connected", {
       connected: true,
       roomID: data,
       userID: socket.id,
-      player:2
+      player: 2,
     });
 
-    io.to(data).emit("game_state", gameState);
+    io.to(data).emit("game_state", gameStates.get(data));
     io.to(data).emit("turn", 1);
   });
 
   socket.on("input", (input) => {
     console.log("input", input);
-    console.log(currentRooms)
-    console.log("playersTurn", playersTurn);
-    //if valid
+    // if valid
     updateGameState(input);
-
-    //console.log("user wants to join here", data);
   });
 
   socket.on("create_room", (name) => {
+    const roomID = name + "-" + socket.id;
+
     socket.emit("connected", {
       connected: true,
-      roomID: name + "-" + socket.id,
+      roomID: roomID,
       userID: socket.id,
-      player:1
+      player: 1,
     });
 
-    //console.log("room created with data:", name + "-" + socket.id);
-    socket.join(name + "-" + socket.id);
-  
-    console.log("rooms-join", currentRooms);
+    socket.join(roomID);
 
-    io.to(name + "-" + socket.id).emit("game_state", gameState);
-    playersTurn = 1;
-    console.log("playersTurn", playersTurn);
-    io.to(name + "-" + socket.id).emit("turn", playersTurn);
+    // create a game state for the room
+    gameStates.set(roomID, createGameState());
+
+    io.to(roomID).emit("game_state", gameStates.get(roomID));
+    io.to(roomID).emit("turn", 1);
   });
 
   // Handle user disconnection
@@ -116,10 +109,7 @@ io.on("connection", (socket) => {
   });
 });
 
-// Additional function to generate a unique user ID
-function generateRoomId() {
-  return Math.random().toString(36).substr(2, 9);
-}
+
 
 // start the web server
 let port = process.env.PORT || 8080; // set our port
