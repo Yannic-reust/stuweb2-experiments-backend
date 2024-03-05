@@ -75,6 +75,7 @@ function updateGameState(data) {
         io.to(data.roomID).emit("game_over", { winner });
         // You can add more logic here for handling the end of the game
       }
+      }
     
   
 }
