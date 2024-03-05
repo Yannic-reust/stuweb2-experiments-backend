@@ -6,34 +6,18 @@ import cors from "cors";
 let app = express();
 const server = createServer(app);
 
-// create a map to store game states for each room
 const gameStates = new Map();
 
-//options for cors midddleware
-const options = {
-  allowedHeaders: [
-      'X-ACCESS_TOKEN',
-      'Access-Control-Allow-Origin',
-      'Authorization',
-      'Origin',
-      'x-requested-with',
-      'Content-Type',
-      'Content-Range',
-      'Content-Disposition',
-      'Content-Description',
-  ],
-  credentials: true,
-  methods: 'GET,HEAD,OPTIONS,PUT,PATCH,POST,DELETE',
-  origin: [
-      'http://localhost:5713',
-      'https://stuweb2-experiments.vercel.app/',
-  ],
-  preflightContinue: false,
-};
 
-const corsOpts = cors(options);
-
-//app.use(corsOpts);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+  },
+  connectionStateRecovery: {
+    maxDisconnectionDuration: 2 * 60 * 1000,
+  },
+});
 
 function createGameState() {
   return [
@@ -49,6 +33,32 @@ function createGameState() {
   ];
 }
 
+function checkWinner(roomGameState) {
+  const winningCombinations = [
+    [0, 1, 2],
+    [3, 4, 5],
+    [6, 7, 8],
+    [0, 3, 6],
+    [1, 4, 7],
+    [2, 5, 8],
+    [0, 4, 8],
+    [2, 4, 6],
+  ];
+
+  for (const combination of winningCombinations) {
+    const [a, b, c] = combination;
+    if (
+      roomGameState[a].player &&
+      roomGameState[a].player === roomGameState[b].player &&
+      roomGameState[a].player === roomGameState[c].player
+    ) {
+      return roomGameState[a].player;
+    }
+  }
+
+  return null;
+}
+
 function updateGameState(data) {
   const roomGameState = gameStates.get(data.roomID);
 
@@ -59,20 +69,15 @@ function updateGameState(data) {
     io.to(data.roomID).emit("game_state", roomGameState);
     io.to(data.roomID).emit("turn", playersTurn);
 
-   
+    if (data.move >= 5) {
+      const winner = checkWinner(roomGameState);
+      if (winner) {
+        io.to(data.roomID).emit("game_over", { winner });
+        // You can add more logic here for handling the end of the game
+      }
+    }
   }
 }
-
-// Enable CORS
-const io = new Server(server, {
-  cors: {
-    origin: "*",
-    methods: ["GET", "POST"],
-  },
-  connectionStateRecovery: {
-    maxDisconnectionDuration: 2 * 60 * 1000,
-  },
-});
 
 io.on("connection", (socket) => {
   socket.on("join_room", (data) => {
@@ -109,23 +114,18 @@ io.on("connection", (socket) => {
 
     socket.join(roomID);
 
-    // create a game state for the room
     gameStates.set(roomID, createGameState());
 
     io.to(roomID).emit("game_state", gameStates.get(roomID));
     io.to(roomID).emit("turn", 1);
   });
 
-  // Handle user disconnection
   socket.on("disconnect", () => {
     socket.leaveAll();
     console.log("a user disconnected", socket.id);
-
-    // Additional logic for handling user disconnection
   });
 });
 
-// start the web server
-let port = process.env.PORT || 8080; // set our port
+let port = process.env.PORT || 8080;
 server.listen(port);
 console.log("Magic happens on port " + port);
