@@ -69,14 +69,14 @@ function updateGameState(data) {
     io.to(data.roomID).emit("game_state", roomGameState);
     io.to(data.roomID).emit("turn", playersTurn);
 
-    if (data.move >= 5) {
+   
       const winner = checkWinner(roomGameState);
       if (winner) {
         io.to(data.roomID).emit("game_over", { winner });
         // You can add more logic here for handling the end of the game
       }
-    }
-  }
+    
+  
 }
 
 io.on("connection", (socket) => {
